@@ -1,71 +1,51 @@
-let lastSyncTime = null; // Dernier temps synchronisé
+let lastSyncTime = null; // Dernière heure synchronisée
 let localTimeOffset = 0; // Décalage local
 
-// Fonction pour obtenir l'heure UTC depuis l'API
-async function syncTime() {
-    try {
-        console.log("Appel à l'API pour synchroniser l'heure...");
-        const response = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC');
-        const data = await response.json();
-        const utcDatetime = data.utc_datetime;
-        const unixTimestamp = new Date(utcDatetime).getTime();
-
-        // Mise à jour des variables
-        lastSyncTime = unixTimestamp;
-        localTimeOffset = Date.now() - lastSyncTime;
-        console.log(`Temps synchronisé : ${unixTimestamp}`);
-    } catch (error) {
-        console.error("Erreur lors de la récupération de l'heure UTC :", error);
-    }
+// Fonction pour obtenir l'heure UTC depuis une API
+async function getUTCTime() {
+    const response = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC');
+    const data = await response.json();
+    return new Date(data.utc_datetime).getTime(); // Retourne l'heure en millisecondes (unixtime)
 }
 
-// Fonction pour obtenir l'heure synchronisée
-function getSyncedTime() {
-    if (lastSyncTime === null) {
-        console.log("Temps non synchronisé, appel à l'API...");
-        syncTime();
-        return 0; // Retourner un timestamp arbitraire jusqu'à la synchronisation
-    }
-
-    // Calculer le temps synchronisé
-    const syncedTime = lastSyncTime + (Date.now() - lastSyncTime + localTimeOffset);
-    console.log(`Temps synchronisé (calculé) : ${syncedTime}`);
-    return syncedTime;
+// Fonction pour mettre à jour l'heure et le décalage local toutes les 15 secondes
+async function updateTimeSync() {
+    const utcTime = await getUTCTime();
+    lastSyncTime = utcTime; // Mise à jour du dernier temps synchronisé
+    localTimeOffset = Date.now() - lastSyncTime; // Calcul du décalage local
 }
+
+// Initialisation du mécanisme de synchronisation toutes les 15 secondes
+setInterval(updateTimeSync, 15000); // Chaque 15 secondes, on met à jour l'heure
 
 // Définition de l'extension pour TurboWarp
 (function (Scratch) {
     'use strict';
 
+    // Création de l'extension
     class TimeExtension {
+        // Nom de l'extension
         getInfo() {
             return {
                 id: 'timeExtension',
                 name: 'Time Extension',
                 blocks: [
                     {
-                        opcode: 'getSyncedTime',
+                        opcode: 'getTimeSync',
                         blockType: Scratch.BlockType.REPORTER,
-                        text: 'obtenir le temps synchronisé UTC',
+                        text: 'obtenir l\'heure synchronisée',
                     },
                 ],
             };
         }
 
-        // Fonction associée au bloc
-        async getSyncedTime() {
-            if (lastSyncTime === null) {
-                console.log("Synchronisation en cours...");
-                await syncTime();
-            }
-            return getSyncedTime();
+        // Fonction associée au bloc qui renvoie l'heure synchronisée
+        getTimeSync() {
+            // Retourne l'heure actuelle avec le décalage calculé
+            return Date.now() - localTimeOffset;
         }
     }
 
-    // Enregistrement de l'extension
+    // Enregistrement de l'extension dans Scratch
     Scratch.extensions.register(new TimeExtension());
-
 })(Scratch);
-
-// Mettre à jour le temps toutes les 15 secondes
-setInterval(syncTime, 15000);
