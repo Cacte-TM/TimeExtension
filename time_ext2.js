@@ -1,38 +1,38 @@
 class Extension {
   constructor() {
-    // Ce code est exécuté lorsqu'on crée une nouvelle instance de l'extension
-    this.apiUrl = 'https://worldtimeapi.org/api/timezone/Etc/UTC'; // URL de l'API
+    this.apiUrl = 'https://worldtimeapi.org/api/timezone/Etc/UTC'; // URL de l'API UTC
+    this.timestamp = 0;  // Variable pour stocker le dernier timestamp obtenu
+    this.syncTime();  // Synchroniser le temps au démarrage
   }
 
-  // Cette fonction sera appelée depuis ton projet Scratch (TurboWarp)
-  getUTCTime() {
-    return fetch(this.apiUrl)  // Effectue la requête API pour récupérer l'heure UTC
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Erreur de réseau');
-        }
-        return response.json();  // Transforme la réponse en JSON
-      })
+  // Fonction pour synchroniser l'heure UTC avec l'API
+  syncTime() {
+    fetch(this.apiUrl)
+      .then(response => response.json())
       .then(data => {
-        const utcTime = data.datetime; // Extraire l'heure UTC
-        return utcTime; // Retourne l'heure UTC
+        // Utilise l'Unix timestamp en secondes, on le multiplie par 1000 pour obtenir les millisecondes
+        this.timestamp = data.unixtime * 1000; 
       })
       .catch(error => {
-        console.error('Erreur de fetch :', error);
-        return 'Erreur'; // Retourne une erreur si la requête échoue
+        console.error('Erreur de récupération de l\'heure UTC:', error);
+        this.timestamp = 'Erreur';
       });
   }
 
-  // Fonction qui définit un bloc personnalisé dans l'extension
+  // Fonction pour obtenir l'Unix timestamp synchronisé
+  getSynchronizedUnixTime() {
+    return this.timestamp;  // Retourne le dernier Unix timestamp synchronisé
+  }
+
   getInfo() {
     return {
-      id: 'utcTimeExtension', // Identifiant unique pour l'extension
-      name: 'UTC Time Extension', // Nom de l'extension
+      id: 'utcUnixTimeExtension',
+      name: 'UTC Unix Time Extension',
       blocks: [
         {
-          opcode: 'getUTCTime', // Le nom de la fonction qui sera appelée dans Scratch
+          opcode: 'getSynchronizedUnixTime',
           blockType: Scratch.BlockType.REPORTER,
-          text: 'obtenir l\'heure UTC',
+          text: 'obtenir l\'Unix timestamp synchronisé',
           arguments: {}
         }
       ]
@@ -40,5 +40,4 @@ class Extension {
   }
 }
 
-// Enregistre l'extension
 Scratch.extension.register(new Extension());
